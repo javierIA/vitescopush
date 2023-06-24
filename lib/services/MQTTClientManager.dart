@@ -8,8 +8,6 @@ class MQTTClientManager {
   MqttServerClient client =
       MqttServerClient.withPort('test.mosquitto.org', '', 1883);
 
-  var pongCount = 0; // Pong counter
-
   Future<int> connect() async {
     client.logging(on: true);
     client.setProtocolV311();
@@ -18,7 +16,6 @@ class MQTTClientManager {
     client.onDisconnected = onDisconnected;
     client.onConnected = onConnected;
     client.onSubscribed = onSubscribed;
-    client.pongCallback = pong;
 
     final connMess = MqttConnectMessage()
         .withClientIdentifier('Mqtt_MyClientUniqueId')
@@ -49,7 +46,7 @@ class MQTTClientManager {
       return -1;
     }
 
-    const topic = 'test/lol'; // Not a wildcard topic
+    const topic = 'Test'; // Not a wildcard topic
     subscribe(topic);
 
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
@@ -91,21 +88,10 @@ class MQTTClientManager {
       print(
           'MQTTClient::Disconnected callback is unsolicited or none, this is incorrect');
     }
-    if (pongCount == 3) {
-      print('MQTTClient::Pong count is correct');
-    } else {
-      print(
-          'MQTTClient::Pong count is incorrect, expected 3, actual $pongCount');
-    }
   }
 
   void onConnected() {
     print('MQTTClient::Connected');
-  }
-
-  void pong() {
-    print('MQTTClient::Ping response received');
-    pongCount++;
   }
 
   void handleReceivedMessage(String topic, String payload) {
@@ -114,5 +100,22 @@ class MQTTClientManager {
       title: 'New MQTT Message',
       body: notification,
     );
+  }
+
+  Stream<String> getMessagesStream() {
+    final controller = StreamController<String>();
+
+    client.updates?.listen((List<MqttReceivedMessage<MqttMessage>>? messages) {
+      for (final message in messages!) {
+        if (message.payload is MqttPublishPayload) {
+          final publishPayload = message.payload as MqttPublishPayload;
+          final payloadString =
+              MqttPublishPayload.bytesToStringAsString(publishPayload.message!);
+          controller.add(payloadString);
+        }
+      }
+    });
+
+    return controller.stream;
   }
 }

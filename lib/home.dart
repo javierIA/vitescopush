@@ -25,6 +25,13 @@ class _MyHomePageState extends State<MyHomePage> {
         print('MQTTClient::Failed to connect to the MQTT broker');
       }
     });
+
+    mqttClientManager.getMessagesStream().listen((message) {
+      setState(() {
+        messages.add(message);
+      });
+      _showNotification(message);
+    });
   }
 
   @override
@@ -51,7 +58,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ElevatedButton(
             onPressed: () {
               mqttClientManager.publishMessage(
-                'test/lol',
+                'Test',
                 'Hello from Flutter!',
               );
             },
